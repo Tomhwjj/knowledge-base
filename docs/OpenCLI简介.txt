@@ -1,0 +1,5 @@
+OpenCLI 是一个 AI 驱动的命令行工具，可以把任意网站或 Electron 应用变成 CLI 接口。
+支持内置适配器访问 Bilibili、知乎、小红书、Reddit、HackerNews、Twitter/X 等网站。
+还能通过 opencli browser 命令让 AI Agent 操作浏览器，包括导航、填表、点击、提取内容等。
+安装方式：npm install -g @jackwener/opencli
+最低要求：Node.js >= 20.0.0
