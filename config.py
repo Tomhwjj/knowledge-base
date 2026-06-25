@@ -31,5 +31,5 @@ RRF_K = 60                  # RRF 融合参数（越大排名影响越平滑）
 # 未安装时自动回退到 PyMuPDF 纯文本提取
 USE_PDFPLUMBER = True
 
-# ── 国内镜像（加速模型下载）─────────────────
-os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
+# ── HuggingFace 缓存（model/ 目录，跟项目走）──
+os.environ["HF_HOME"] = os.path.join(BASE_DIR, "models")
