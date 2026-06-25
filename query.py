@@ -1,9 +1,10 @@
 """
-知识库查询脚本 (v3)
+知识库查询脚本 (v4)
 - BGE 中文 Embedding（精度 +20%）
 - BM25 + 向量 混合检索 + RRF 融合（补上关键词盲区）
+- 图谱扩展: [[wikilinks]] 反向链接补上关系盲区
 - Cross-Encoder Reranker 精排（精度 +30-50%）
-- 三阶段检索：双路召回 → RRF 融合 → 精排
+- 三路召回 → RRF 融合 → 精排
 """
 import os
 import sys
@@ -98,6 +99,17 @@ if _bm25_result[0] is not None:
 else:
     has_bm25 = False
 
+# 加载图谱
+print(f"图谱 ...", end=" ", flush=True)
+from graph_index import load_graph, expand_candidates
+graph = load_graph()
+if graph:
+    print(f"({graph.get('file_count', '?')} 节点)", end=" ", flush=True)
+    has_graph = True
+else:
+    print("(未构建)", end=" ", flush=True)
+    has_graph = False
+
 print("就绪\n")
 
 
@@ -105,28 +117,20 @@ print("就绪\n")
 # RRF 融合
 # ═══════════════════════════════════════════════
 
-def rrf_fusion(
-    vector_ranked: list[dict],
-    bm25_ranked: list[dict],
-    k: int = RRF_K,
-) -> list[str]:
+def rrf_fusion(*routes: list[dict], k: int = RRF_K) -> list[str]:
     """
-    Reciprocal Rank Fusion: 把两条检索路的排名融合成一个。
+    Reciprocal Rank Fusion: 多路检索排名融合。
 
-    不关心各自打分的绝对数值（向量距离和 BM25 分的量纲不同），
-    只看排名 —— 两条路都排前面的文档 RRF 分最高。
+    向量距离/BM25分/图谱距离量纲不同，只看排名。
+    多路都排前面的文档 RRF 分最高。
     """
     scores: dict[str, float] = {}
 
-    for rank, r in enumerate(vector_ranked):
-        doc_id = r["id"]
-        scores[doc_id] = scores.get(doc_id, 0.0) + 1.0 / (k + rank + 1)
+    for route in routes:
+        for rank, r in enumerate(route):
+            doc_id = r["id"]
+            scores[doc_id] = scores.get(doc_id, 0.0) + 1.0 / (k + rank + 1)
 
-    for rank, r in enumerate(bm25_ranked):
-        doc_id = r["id"]
-        scores[doc_id] = scores.get(doc_id, 0.0) + 1.0 / (k + rank + 1)
-
-    # 按 RRF 分数降序排列
     sorted_ids = sorted(scores.items(), key=lambda x: x[1], reverse=True)
     return [doc_id for doc_id, _ in sorted_ids]
 
@@ -181,14 +185,51 @@ def retrieve(query: str, top_k: int = TOP_K) -> list[dict]:
         except Exception:
             pass
 
-    # ── RRF 融合 ──
-    merged_ids = rrf_fusion(vector_ranked, bm25_ranked)
+    # ── 路3: 图谱扩展 ──
+    graph_ranked = []
+    if has_graph:
+        # 取向量+BM25 的 top 候选项的源文件，找它们链接的笔记
+        top_sources = set()
+        for r in (vector_ranked + bm25_ranked)[:top_k * 2]:
+            src = r["metadata"].get("source", "")
+            if src:
+                top_sources.add(src)
+
+        graph_linked = set()
+        for src in top_sources:
+            linked = expand_candidates(src, graph)
+            graph_linked.update(linked)
+
+        # 在 ChromaDB 中查找图谱扩展的文档块
+        if graph_linked:
+            for linked_file in graph_linked:
+                try:
+                    linked_chunks = collection.get(
+                        where={"source": linked_file},
+                        limit=top_k,
+                    )
+                    if linked_chunks["ids"]:
+                        for j in range(len(linked_chunks["ids"])):
+                            graph_ranked.append({
+                                "id":       linked_chunks["ids"][j],
+                                "document": linked_chunks["documents"][j],
+                                "metadata": linked_chunks["metadatas"][j],
+                                "graph_file": linked_file,
+                            })
+                except Exception:
+                    pass
+
+    # ── RRF 三路融合 ──
+    merged_ids = rrf_fusion(vector_ranked, bm25_ranked, graph_ranked)
 
     # 建立 doc_id → 详情 的映射
     doc_map = {}
     for r in vector_ranked:
         doc_map[r["id"]] = r
     for r in bm25_ranked:
+        if r["id"] not in doc_map:
+            doc_map[r["id"]] = r
+    for r in graph_ranked:
         if r["id"] not in doc_map:
             doc_map[r["id"]] = r
 
@@ -233,6 +274,8 @@ def format_results(query: str, results: list[dict]):
             sources.append("向量")
         if "bm25_score" in r:
             sources.append(f"BM25:{r['bm25_score']:.1f}")
+        if "graph_file" in r:
+            sources.append(f"图谱:{r['graph_file']}")
         source_tag = "+".join(sources) if sources else "融合"
 
         preview = r["document"][:250].replace("\n", " ") + ("..." if len(r["document"]) > 250 else "")

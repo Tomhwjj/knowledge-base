@@ -322,6 +322,13 @@ def main(dry_run: bool = False):
     save_manifest(manifest)
     print(f"\n[DONE] 新增 {total_added} 块 → 总计 {collection.count()} 块", flush=True)
 
+    # ── 自动重建图谱 ──
+    from graph_index import build_graph, save_graph as save_g
+    print("  重建图谱 ...", end=" ", flush=True)
+    g = build_graph()
+    save_g(g)
+    print(f"({g['file_count']} 节点)", flush=True)
+
 
 if __name__ == "__main__":
     dry = "--dry-run" in sys.argv
