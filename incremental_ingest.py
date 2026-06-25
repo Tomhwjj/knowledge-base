@@ -152,6 +152,27 @@ def read_file(filepath: str) -> str | None:
     return None
 
 
+def load_kbignore() -> list[str]:
+    """读取 .kbignore，返回忽略规则列表"""
+    ignore_path = os.path.join(DOC_DIR, ".kbignore")
+    if not os.path.exists(ignore_path):
+        return []
+    with open(ignore_path, "r", encoding="utf-8") as f:
+        return [line.strip() for line in f
+                if line.strip() and not line.strip().startswith("#")]
+
+
+def should_ignore(filename: str, rules: list[str]) -> bool:
+    """检查文件是否匹配忽略规则（简单通配符）"""
+    import fnmatch
+    for rule in rules:
+        if fnmatch.fnmatch(filename, rule):
+            return True
+        if rule.endswith("/") and filename.startswith(rule):
+            return True
+    return False
+
+
 def find_latest_collection(chroma_client):
     """找最新的 knowledge_ 集合"""
     cols = [c.name for c in chroma_client.list_collections()
@@ -170,10 +191,12 @@ def main(dry_run: bool = False):
     print(f"  文档目录: {DOC_DIR}", flush=True)
 
     # ── 扫描文件 ──
+    ignore_rules = load_kbignore()
     all_files = [f for f in os.listdir(DOC_DIR)
                  if os.path.isfile(os.path.join(DOC_DIR, f))
                  and os.path.splitext(f)[1].lower() in (".txt", ".md", ".pdf")
-                 and not f.startswith(".")]  # 排除隐藏文件（含 .ingest_manifest.json）
+                 and not f.startswith(".")
+                 and not should_ignore(f, ignore_rules)]
 
     if not all_files:
         print("  没有文件", flush=True)

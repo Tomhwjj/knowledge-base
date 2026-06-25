@@ -182,9 +182,27 @@ def main():
     collection_name = f"knowledge_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
     collection = chroma.create_collection(name=collection_name)
 
+    # 加载 .kbignore
+    kbignore_path = os.path.join(DOC_DIR, ".kbignore")
+    ignore_rules = []
+    if os.path.exists(kbignore_path):
+        with open(kbignore_path, "r", encoding="utf-8") as f:
+            ignore_rules = [l.strip() for l in f if l.strip() and not l.strip().startswith("#")]
+    import fnmatch
+
+    def should_ignore(fname):
+        for rule in ignore_rules:
+            if fnmatch.fnmatch(fname, rule):
+                return True
+            if rule.endswith("/") and fname.startswith(rule):
+                return True
+        return False
+
     print(f"[3/3] 扫描文档: {DOC_DIR}")
     files = [f for f in os.listdir(DOC_DIR)
-             if os.path.isfile(os.path.join(DOC_DIR, f))]
+             if os.path.isfile(os.path.join(DOC_DIR, f))
+             and not f.startswith(".")
+             and not should_ignore(f)]
     supported = [f for f in files
                  if os.path.splitext(f)[1].lower() in (".txt", ".md", ".pdf")]
 

@@ -6,7 +6,7 @@ import os
 
 # ── 路径 ────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DOC_DIR = os.path.join(BASE_DIR, "docs")
+DOC_DIR = r"D:\Agent\Obsidian store"
 DB_DIR  = os.path.join(BASE_DIR, "vectordb")
 
 # ── Embedding 模型 ──────────────────────────
