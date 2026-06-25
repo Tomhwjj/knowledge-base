@@ -199,12 +199,23 @@ def main():
         return False
 
     print(f"[3/3] 扫描文档: {DOC_DIR}")
-    files = [f for f in os.listdir(DOC_DIR)
-             if os.path.isfile(os.path.join(DOC_DIR, f))
-             and not f.startswith(".")
-             and not should_ignore(f)]
-    supported = [f for f in files
-                 if os.path.splitext(f)[1].lower() in (".txt", ".md", ".pdf")]
+
+    def walk_files(root: str):
+        """递归扫描，返回相对路径列表"""
+        result = []
+        for entry in os.listdir(root):
+            full = os.path.join(root, entry)
+            rel = os.path.relpath(full, DOC_DIR)
+            if entry.startswith(".") or should_ignore(rel):
+                continue
+            if os.path.isfile(full):
+                if os.path.splitext(entry)[1].lower() in (".txt", ".md", ".pdf"):
+                    result.append(rel)
+            elif os.path.isdir(full):
+                result.extend(walk_files(full))
+        return result
+
+    supported = walk_files(DOC_DIR)
 
     if not supported:
         print(f"\n  [WARN] 没有找到支持的文档。")
@@ -223,7 +234,8 @@ def main():
         if not chunks:
             continue
 
-        ids   = [f"{filename}_chunk{i}" for i in range(len(chunks))]
+        safe_name = filename.replace("\\", "/").replace("/", "_")
+        ids   = [f"{safe_name}_chunk{i}" for i in range(len(chunks))]
         metas = [{"source": filename, "chunk": i, "char_count": len(c)}
                  for i, c in enumerate(chunks)]
         embeddings = model.encode(chunks, show_progress_bar=True).tolist()

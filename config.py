@@ -33,3 +33,4 @@ USE_PDFPLUMBER = True
 
 # ── HuggingFace 缓存（model/ 目录，跟项目走）──
 os.environ["HF_HOME"] = os.path.join(BASE_DIR, "models")
+os.environ["HF_HUB_OFFLINE"] = "1"          # 模型已缓存，禁止联网校验

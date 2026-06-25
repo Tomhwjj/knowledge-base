@@ -190,13 +190,25 @@ def main(dry_run: bool = False):
     print(f"增量入库{' (预览模式)' if dry_run else ''}", flush=True)
     print(f"  文档目录: {DOC_DIR}", flush=True)
 
-    # ── 扫描文件 ──
+    # ── 递归扫描文件 ──
     ignore_rules = load_kbignore()
-    all_files = [f for f in os.listdir(DOC_DIR)
-                 if os.path.isfile(os.path.join(DOC_DIR, f))
-                 and os.path.splitext(f)[1].lower() in (".txt", ".md", ".pdf")
-                 and not f.startswith(".")
-                 and not should_ignore(f, ignore_rules)]
+
+    def walk_files(root: str):
+        """递归扫描，返回相对路径列表"""
+        result = []
+        for entry in os.listdir(root):
+            full = os.path.join(root, entry)
+            rel = os.path.relpath(full, DOC_DIR)
+            if entry.startswith(".") or should_ignore(rel, ignore_rules):
+                continue
+            if os.path.isfile(full):
+                if os.path.splitext(entry)[1].lower() in (".txt", ".md", ".pdf"):
+                    result.append(rel)
+            elif os.path.isdir(full):
+                result.extend(walk_files(full))
+        return result
+
+    all_files = walk_files(DOC_DIR)
 
     if not all_files:
         print("  没有文件", flush=True)
@@ -265,9 +277,11 @@ def main(dry_run: bool = False):
     total_added = 0
 
     for filename, fhash in to_process:
+        safe_name = filename.replace("\\", "/").replace("/", "_")
+
         # 先删除旧块（如果是修改）
         if filename in manifest:
-            old_ids = [f"{filename}_chunk{i}" for i in range(manifest[filename].get("chunks", 0))]
+            old_ids = [f"{safe_name}_chunk{i}" for i in range(manifest[filename].get("chunks", 0))]
             if old_ids:
                 try:
                     collection.delete(ids=old_ids)
@@ -284,7 +298,7 @@ def main(dry_run: bool = False):
         if not chunks:
             continue
 
-        ids = [f"{filename}_chunk{i}" for i in range(len(chunks))]
+        ids = [f"{safe_name}_chunk{i}" for i in range(len(chunks))]
         metas = [{"source": filename, "chunk": i, "char_count": len(c)}
                  for i, c in enumerate(chunks)]
         embeddings = model.encode(chunks, show_progress_bar=False).tolist()
