@@ -1,0 +1,18 @@
+# KB 索引忽略规则 — 这些文件不会被灌入向量库
+# 语法同 .gitignore
+
+# Obsidian 系统目录
+.obsidian/
+.trash/
+
+# 非文本文件（Canvas 白板、Excalidraw 绘图）
+*.canvas
+*.excalidraw
+
+# 模板（不需要被检索）
+Templates/
+模板/
+
+# 日记草稿（按需取消注释）
+# 日记/
+# Daily/

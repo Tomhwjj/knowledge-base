@@ -1,0 +1,67 @@
+{
+  "2025-06-25 投资智囊项目搭建.md": {
+    "hash": "864891f5616b34239b67c5455bcfebc4",
+    "chunks": 4,
+    "last_ingested": "2026-06-25 16:50:15"
+  },
+  "Claude Code\\安装 Agent Reach 全网调研工具.md": {
+    "hash": "e0da341d652a32202ad544c2498eb0aa",
+    "chunks": 2,
+    "last_ingested": "2026-06-25 16:50:16"
+  },
+  "日志\\2026-06-24 Claude Code 配置整理.md": {
+    "hash": "1f48b7dc5aff9bb0d7410d324676499e",
+    "chunks": 3,
+    "last_ingested": "2026-06-25 16:50:17"
+  },
+  "项目日志\\2026-06-22 D-Agent-git 仓库整理与 Skill 合并.md": {
+    "hash": "1454eb8eee3e3f61cb561d2bde65b498",
+    "chunks": 4,
+    "last_ingested": "2026-06-25 16:50:19"
+  },
+  "项目日志\\2026-06-24-选股交易系统搭建.md": {
+    "hash": "4d7d7bdd1a333a990922f80b3c36a5c6",
+    "chunks": 3,
+    "last_ingested": "2026-06-25 16:50:21"
+  },
+  "项目日志\\2026-06-25 Claude Code MCP双件套整合.md": {
+    "hash": "e15546b5cb8207c8968c1eed6f4b1176",
+    "chunks": 3,
+    "last_ingested": "2026-06-25 16:50:22"
+  },
+  "OpenCLI简介.txt": {
+    "hash": "052ec8256831977b490caa8128831370",
+    "chunks": 1,
+    "last_ingested": "2026-06-25 18:31:53"
+  },
+  "投资策略总览.md": {
+    "hash": "5c0375e176f9cc0bab789d0e0d507686",
+    "chunks": 3,
+    "last_ingested": "2026-06-25 18:31:56"
+  },
+  "韭菜修行记.txt": {
+    "hash": "226749a1a9b71627b481a02110766f17",
+    "chunks": 561,
+    "last_ingested": "2026-06-25 18:36:09"
+  },
+  "日志\\2026-06-25 知识库优化.md": {
+    "hash": "05b6195f50b8d2cf59ca72e7a810ce78",
+    "chunks": 1,
+    "last_ingested": "2026-06-25 18:41:20"
+  },
+  "CC长久记忆-实现架构.md": {
+    "hash": "1ed0c387a08db8a1b83233a76d627045",
+    "chunks": 9,
+    "last_ingested": "2026-06-26 15:57:01"
+  },
+  "记忆\\2026-06-26-mem-decision-VaultRAG-三路检索+长久记忆架构.md": {
+    "hash": "baafc2e5f9ae0c8818b6eb714df2a13d",
+    "chunks": 2,
+    "last_ingested": "2026-06-26 15:57:02"
+  },
+  "记忆\\_health-report.md": {
+    "hash": "1ad8eb93f2d8e65961d8c1b71fe974f3",
+    "chunks": 1,
+    "last_ingested": "2026-06-26 15:57:02"
+  }
+}
