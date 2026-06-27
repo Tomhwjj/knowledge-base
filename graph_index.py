@@ -86,13 +86,49 @@ def build_graph() -> dict:
                 if source not in backlinks[target_file]:
                     backlinks[target_file].append(source)
 
+    # 共现词图谱（弥补 wikilinks 稀疏性）
+    cooccurrence = _build_cooccurrence(all_files, title_index)
+
     graph = {
         "outgoing": outgoing,
         "backlinks": backlinks,
         "title_index": title_index,
         "file_count": len(all_files),
+        "cooccurrence": cooccurrence,
     }
     return graph
+
+
+def _build_cooccurrence(all_files: list[str], title_index: dict) -> dict:
+    """提取文档中高频共现的技术词对，构建隐式边"""
+    import jieba.analyse
+    from collections import Counter
+
+    pair_counter = Counter()
+    doc_keywords = {}  # rel_path → {keywords}
+
+    for fp in all_files:
+        rel = os.path.relpath(fp, DOC_DIR)
+        try:
+            with open(fp, "r", encoding="utf-8", errors="replace") as f:
+                text = f.read()
+            # 只取技术关键词（英文+2字以上中文）
+            kw = jieba.analyse.extract_tags(text, topK=8)
+            kw_filtered = [k for k in kw if len(k) >= 2]
+            doc_keywords[rel] = set(kw_filtered)
+        except Exception:
+            doc_keywords[rel] = set()
+
+    # 统计共现对
+    for rel, kws in doc_keywords.items():
+        kws_list = list(kws)
+        for i in range(len(kws_list)):
+            for j in range(i + 1, len(kws_list)):
+                pair = tuple(sorted([kws_list[i], kws_list[j]]))
+                pair_counter[pair] += 1
+
+    # 只保留高频共现对（≥2次）
+    return {f"{a} <-> {b}": c for (a, b), c in pair_counter.items() if c >= 2}
 
 
 def _resolve_link(target: str, title_index: dict, source_path: str) -> str | None:

@@ -190,18 +190,19 @@ print("就绪\n")
 # RRF 融合
 # ═══════════════════════════════════════════════
 
-def rrf_fusion(*routes: list[dict], k: int = RRF_K) -> list[str]:
+def rrf_fusion(*routes: list[dict], k: int = RRF_K, weights: list[float] = None) -> list[str]:
     """
     Reciprocal Rank Fusion: 多路检索排名融合。
-
-    向量距离/BM25分/图谱距离量纲不同，只看排名。
-    多路都排前面的文档 RRF 分最高。
+    weights 调节各路权重，如 [1.0, 1.5, 0.7] = 向量1.0, BM251.5, 图谱0.7
     """
     scores: dict[str, float] = {}
+    if weights is None:
+        weights = [1.0] * len(routes)
 
-    for route in routes:
+    for route, w in zip(routes, weights):
         for rank, r in enumerate(route):
             doc_id = r["id"]
+            scores[doc_id] = scores.get(doc_id, 0.0) + w * 1.0 / (k + rank + 1)
             scores[doc_id] = scores.get(doc_id, 0.0) + 1.0 / (k + rank + 1)
 
     sorted_ids = sorted(scores.items(), key=lambda x: x[1], reverse=True)
@@ -324,6 +325,27 @@ def retrieve(query: str, top_k: int = TOP_K) -> list[dict]:
 
     for c, score in zip(candidates, rerank_scores):
         c["rerank_score"] = float(score)
+
+        # 时间衰减（半衰期 30 天）
+        import math, datetime
+        mem_date = c.get("metadata", {}).get("date", "")
+        if not mem_date:
+            try:
+                src = c.get("metadata", {}).get("source", "")
+                if src:
+                    match = __import__('re').search(r'(\d{4}-\d{2}-\d{2})', src)
+                    if match:
+                        mem_date = match.group(1)
+            except:
+                pass
+        if mem_date:
+            try:
+                d = datetime.date.fromisoformat(mem_date)
+                age = (datetime.date.today() - d).days
+                decay = math.exp(-0.023 * age)  # λ = ln(2)/30
+                c["rerank_score"] = float(score) * decay
+            except ValueError:
+                pass
 
     candidates.sort(key=lambda x: x["rerank_score"], reverse=True)
     return candidates[:top_k]
