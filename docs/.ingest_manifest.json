@@ -68,5 +68,15 @@
     "hash": "31d456166c1bd69b11b2193ba969b781",
     "chunks": 2,
     "last_ingested": "2026-06-26 16:53:51"
+  },
+  "2026-06-27-CC记忆架构改进计划.md": {
+    "hash": "9016f0ebabd720edaadd9ce026f569ae",
+    "chunks": 6,
+    "last_ingested": "2026-06-27 15:34:56"
+  },
+  "DeepSeek评估-CC长久记忆架构.md": {
+    "hash": "d768b6b6dd114fbf2dd8c2822dcd598f",
+    "chunks": 2,
+    "last_ingested": "2026-06-27 15:34:57"
   }
 }

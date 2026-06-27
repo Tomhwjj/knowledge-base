@@ -26,11 +26,12 @@ def count_tokens(text: str) -> int:
         enc = tiktoken.get_encoding("cl100k_base")
         return len(enc.encode(text))
     except ImportError:
-        # 回退：1 中文字符 ≈ 0.35 token, 1 英文词 ≈ 0.8 token
+        # 回退：中英混合分别估算（中文 ~1.8 token/字, 英文 ~0.25 token/字）
         import re
-        cn = len(re.findall(r'[一-鿿]', text))
-        en = len(re.findall(r'[a-zA-Z]+', text))
-        return int(cn * 0.35 + en * 0.8)
+        cn = len(re.findall(r'[一-鿿　-〿＀-￯]', text))
+        en_chars = len(re.findall(r'[a-zA-Z0-9]', text))
+        other = len(text) - cn - en_chars
+        return int(cn * 1.8 + en_chars * 0.25 + other * 0.5)
 
 
 def main():

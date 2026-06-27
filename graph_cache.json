@@ -1,18 +1,23 @@
 {
   "outgoing": {
     "2025-06-25 投资智囊项目搭建.md": [],
+    "2026-06-27-CC记忆架构改进计划.md": [],
     "CC长久记忆-实现架构.md": [
-      "2026-06-25 项目日志",
       "投资智囊项目搭建",
+      "2026-06-25 项目日志",
       "..."
     ],
     "Claude Code\\安装 Agent Reach 全网调研工具.md": [],
+    "DeepSeek评估-CC长久记忆架构.md": [
+      "wikilinks"
+    ],
     "投资策略总览.md": [],
     "日志\\2026-06-24 Claude Code 配置整理.md": [],
     "日志\\2026-06-25 知识库优化.md": [],
     "记忆\\2026-06-26-mem-decision-Claude-Code-长久记忆三层蒸馏方案.md": [],
     "记忆\\2026-06-26-mem-decision-VaultRAG-三路检索+长久记忆架构.md": [],
     "记忆\\_draft-2026-06-26.md": [],
+    "记忆\\_draft-2026-06-27.md": [],
     "记忆\\_health-report.md": [],
     "项目日志\\2026-06-22 D-Agent-git 仓库整理与 Skill 合并.md": [
       "../../c.%2C/Users/%E4%BD%95%E4%BC%9F/.claude/CLAUDE"
@@ -23,18 +28,21 @@
   "backlinks": {},
   "title_index": {
     "2025-06-25 投资智囊项目搭建": "2025-06-25 投资智囊项目搭建.md",
+    "2026-06-27-CC记忆架构改进计划": "2026-06-27-CC记忆架构改进计划.md",
     "CC长久记忆-实现架构": "CC长久记忆-实现架构.md",
     "安装 Agent Reach 全网调研工具": "Claude Code\\安装 Agent Reach 全网调研工具.md",
+    "DeepSeek评估-CC长久记忆架构": "DeepSeek评估-CC长久记忆架构.md",
     "投资策略总览": "投资策略总览.md",
     "2026-06-24 Claude Code 配置整理": "日志\\2026-06-24 Claude Code 配置整理.md",
     "2026-06-25 知识库优化": "日志\\2026-06-25 知识库优化.md",
     "2026-06-26-mem-decision-Claude-Code-长久记忆三层蒸馏方案": "记忆\\2026-06-26-mem-decision-Claude-Code-长久记忆三层蒸馏方案.md",
     "2026-06-26-mem-decision-VaultRAG-三路检索+长久记忆架构": "记忆\\2026-06-26-mem-decision-VaultRAG-三路检索+长久记忆架构.md",
     "_draft-2026-06-26": "记忆\\_draft-2026-06-26.md",
+    "_draft-2026-06-27": "记忆\\_draft-2026-06-27.md",
     "_health-report": "记忆\\_health-report.md",
     "2026-06-22 D-Agent-git 仓库整理与 Skill 合并": "项目日志\\2026-06-22 D-Agent-git 仓库整理与 Skill 合并.md",
     "2026-06-24-选股交易系统搭建": "项目日志\\2026-06-24-选股交易系统搭建.md",
     "2026-06-25 Claude Code MCP双件套整合": "项目日志\\2026-06-25 Claude Code MCP双件套整合.md"
   },
-  "file_count": 13
+  "file_count": 16
 }
