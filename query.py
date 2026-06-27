@@ -18,6 +18,10 @@ from config import (
     RERANKER_MODEL,
     TOP_K, RERANK_MULTIPLIER, RRF_K,
 )
+try:
+    from config import RRF_WEIGHTS
+except ImportError:
+    RRF_WEIGHTS = None
 import chromadb
 from sentence_transformers import SentenceTransformer, CrossEncoder
 
@@ -329,7 +333,8 @@ def retrieve(query: str, top_k: int = TOP_K) -> list[dict]:
                     pass
 
     # ── RRF 三路融合 ──
-    merged_ids = rrf_fusion(vector_ranked, bm25_ranked, graph_ranked)
+    merged_ids = rrf_fusion(vector_ranked, bm25_ranked, graph_ranked,
+                            weights=RRF_WEIGHTS)
 
     # 建立 doc_id → 详情 的映射
     doc_map = {}
