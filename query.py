@@ -1,16 +1,64 @@
 """
-知识库查询脚本 (v4)
-- BGE 中文 Embedding（精度 +20%）
-- BM25 + 向量 混合检索 + RRF 融合（补上关键词盲区）
-- 图谱扩展: [[wikilinks]] 反向链接补上关系盲区
-- Cross-Encoder Reranker 精排（精度 +30-50%）
-- 三路召回 → RRF 融合 → 精排
+知识库查询脚本 (v4.1)
+- 优先连接本地 kb_server 常驻服务（毫秒级查询）
+- 服务未运行时自动回退到本地加载模式
+- BGE + BM25 + 图谱 三路 RRF 融合 + Reranker 精排
 """
 import os
 import sys
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
+
+# ═══════════════════════════════════════════════
+# 优先尝试常驻服务
+# ═══════════════════════════════════════════════
+
+SERVER_PORT = 8765
+
+def _try_server_query(query: str, fast: bool = False) -> bool:
+    """尝试通过常驻 kb_server 查询。成功返回 True，失败返回 False。"""
+    import urllib.request, json as _json
+    import urllib.parse
+    try:
+        url = f"http://127.0.0.1:{SERVER_PORT}/query?q={urllib.parse.quote(query)}"
+        if fast:
+            url += "&fast=1"
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = _json.loads(resp.read().decode("utf-8"))
+        if "error" in data:
+            print(f"[query] server 返回错误: {data['error']}")
+            return False
+        # 格式化输出
+        mode_label = "⚡ server (fast)" if fast else "⚡ server"
+        print(f"\n{'='*60}")
+        print(f"[Q] {data['query']}")
+        print(f"{mode_label}  |  {data['time_ms']:.0f}ms  |  {data['total_hits']} 条结果\n")
+        for r in data.get("results", []):
+            paths = "+".join(r.get("paths", []))
+            print(f"  [{r.get('rank',0):.4f}] [{r['source']}]  精排: {r['score']:.4f} | {paths}")
+            print(f"      {r['preview']}")
+            print()
+        return True
+    except Exception as e:
+        print(f"[query] server 连接失败 ({type(e).__name__}: {e})")
+        return False
+
+
+# 解析命令行参数
+_argv = [a for a in sys.argv[1:] if not a.startswith("--")]
+_fast_mode = "--fast" in sys.argv
+
+# 如果只是简单查询（命令行有参数），先试 server
+if len(sys.argv) > 1:
+    query_str = " ".join(_argv) if _argv else " ".join(sys.argv[1:])
+    if not query_str.strip():
+        query_str = " ".join(sys.argv[1:])
+    if _try_server_query(query_str, fast=_fast_mode):
+        sys.exit(0)
+    # server 不可用，回退到本地加载
+    print("[query] kb_server 未运行，回退到本地加载模式...\n")
 
 from config import (
     DB_DIR,
@@ -425,22 +473,51 @@ def format_results(query: str, results: list[dict]):
         print()
 
 
-if len(sys.argv) > 1:
-    query = " ".join(sys.argv[1:])
-    results = retrieve(query)
-    format_results(query, results)
-else:
-    print("输入问题，或 'quit' 退出\n")
-    while True:
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        query = " ".join(sys.argv[1:])
+        # server 模式已在文件头尝试过，这里直接本地模式
+        results = retrieve(query)
+        format_results(query, results)
+    else:
+        # 交互模式：先检查 server
         try:
-            q = input("Query: ").strip()
-            if not q:
-                continue
-            if q.lower() in ("quit", "exit", "q"):
-                print("Bye!")
+            import urllib.request, json as _json
+            url = f"http://127.0.0.1:{SERVER_PORT}/health"
+            with urllib.request.urlopen(url, timeout=1) as resp:
+                health = _json.loads(resp.read().decode("utf-8"))
+            if health.get("status") == "ok":
+                print(f"⚡ kb_server 已就绪 ({health.get('uptime_seconds',0):.0f}s 运行中)")
+                print(f"   模型: {health.get('model','?')} | chunks: {health.get('chunks','?')} | BM25: {health.get('bm25','?')} | 图谱: {health.get('graph','?')}")
+                print(f"   输入问题直接查询（毫秒级），或 'quit' 退出\n")
+                while True:
+                    try:
+                        q = input("Query: ").strip()
+                        if not q:
+                            continue
+                        if q.lower() in ("quit", "exit", "q"):
+                            print("Bye!")
+                            break
+                        _try_server_query(q)
+                    except (EOFError, KeyboardInterrupt):
+                        print("\nBye!")
+                        break
+                sys.exit(0)
+        except Exception:
+            pass
+
+        # 回退：本地交互模式
+        print("输入问题，或 'quit' 退出\n")
+        while True:
+            try:
+                q = input("Query: ").strip()
+                if not q:
+                    continue
+                if q.lower() in ("quit", "exit", "q"):
+                    print("Bye!")
+                    break
+                results = retrieve(q)
+                format_results(q, results)
+            except (EOFError, KeyboardInterrupt):
+                print("\nBye!")
                 break
-            results = retrieve(q)
-            format_results(q, results)
-        except (EOFError, KeyboardInterrupt):
-            print("\nBye!")
-            break
