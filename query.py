@@ -213,6 +213,35 @@ def rrf_fusion(*routes: list[dict], k: int = RRF_K, weights: list[float] = None)
 # 三阶段检索
 # ═══════════════════════════════════════════════
 
+LOG_FILE = os.path.join(os.path.dirname(__file__), ".query_log.jsonl")
+
+
+def _log_query(query: str, results: list[dict], sources: list[str]):
+    """无感日志：记录每次查询的每条结果来自哪路、最终排名"""
+    import json, datetime
+    entry = {
+        "ts": datetime.datetime.now().isoformat(),
+        "query": query[:200],
+        "results": [],
+    }
+    for i, r in enumerate(results):
+        paths = []
+        if "distance" in r:
+            paths.append("vector")
+        if "bm25_score" in r:
+            paths.append("bm25")
+        if "graph_file" in r:
+            paths.append("graph")
+        entry["results"].append({
+            "rank": i + 1,
+            "score": round(r.get("rerank_score", 0), 4),
+            "paths": paths,
+            "source": r.get("metadata", {}).get("source", "")[:100],
+        })
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+
 def retrieve(query: str, top_k: int = TOP_K) -> list[dict]:
     """
     三路检索 + 关键词增强:
@@ -348,7 +377,12 @@ def retrieve(query: str, top_k: int = TOP_K) -> list[dict]:
                 pass
 
     candidates.sort(key=lambda x: x["rerank_score"], reverse=True)
-    return candidates[:top_k]
+    result = candidates[:top_k]
+
+    # 无感日志：记录每条最终结果的来源路径
+    _log_query(query, result, [])
+
+    return result
 
 
 # ═══════════════════════════════════════════════
