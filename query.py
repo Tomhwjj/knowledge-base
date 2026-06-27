@@ -23,6 +23,79 @@ from sentence_transformers import SentenceTransformer, CrossEncoder
 
 
 # ═══════════════════════════════════════════════
+# 关键词提取（Route A 混合本地 + Route B LLM 兜底）
+# ═══════════════════════════════════════════════
+
+def _extract_keywords(text: str, llm_fallback: callable = None) -> list[str]:
+    """
+    三路本地关键词提取 + LLM 兜底:
+      Route A1: 正则自动词典（技术栈/项目名）
+      Route A2: jieba TF-IDF（中文技术词 + 未知词发现）
+      Route A3: jieba TextRank（语义概念）
+      兜底: 合并后 ≤2 且含中文 → LLM 最后一搏
+    """
+    import re, jieba.analyse
+
+    keywords = []
+
+    # ── A1: 正则自动词典（从 vault #mem-rule 快照中抽取）──
+    # 先从 memory_load 拿已有规则快照的 summary 建词典
+    try:
+        from memory_load import load as load_memories
+        rules = load_memories(hot_only=False)
+        rule_text = " ".join([m.get("summary", "") for m in rules
+                             if "mem-rule" in m.get("tags", [])])
+    except Exception:
+        rule_text = ""
+
+    # 基础技术词典（硬编码保底）
+    base_terms = [
+        'ChromaDB', 'Milvus', 'BGE', 'MiniLM', 'BM25', 'jieba',
+        'pdfplumber', 'PyMuPDF', 'Obsidian', 'RAG', 'RRF', 'Reranker',
+        'Cross-Encoder', 'sentence-transformers', 'HuggingFace', 'Playwright',
+        'Claude Code', 'vaultrag', 'knowledge-base', 'investment-advisor',
+    ]
+    # 从规则快照中提取项目名/工具名（自动扩展词典）
+    auto_terms = re.findall(r'[A-Z][a-zA-Z0-9.\-]+[a-zA-Z0-9]', rule_text)
+    all_terms = set(base_terms + auto_terms)
+
+    for term in all_terms:
+        if term.lower() in text.lower():
+            keywords.append(term)
+
+    # ── A2: jieba TF-IDF ──
+    try:
+        tfidf_kw = jieba.analyse.extract_tags(text, topK=6)
+        keywords.extend([k for k in tfidf_kw if len(k) >= 2])
+    except Exception:
+        pass
+
+    # ── A3: jieba TextRank ──
+    try:
+        tr_kw = jieba.analyse.textrank(text, topK=6)
+        keywords.extend([k for k in tr_kw if len(k) >= 2])
+    except Exception:
+        pass
+
+    # ── 去重合并 ──
+    seen = set()
+    merged = []
+    for k in keywords:
+        if k.lower() not in seen:
+            seen.add(k.lower())
+            merged.append(k)
+
+    # ── 兜底: ≤2 且含中文 → LLM ──
+    has_chinese = bool(re.search(r'[一-鿿]', text))
+    if len(merged) <= 2 and has_chinese and llm_fallback:
+        fallback_kw = llm_fallback(text)
+        if fallback_kw:
+            merged.extend(fallback_kw)
+
+    return merged
+
+
+# ═══════════════════════════════════════════════
 # BM25 索引
 # ═══════════════════════════════════════════════
 
@@ -141,12 +214,18 @@ def rrf_fusion(*routes: list[dict], k: int = RRF_K) -> list[str]:
 
 def retrieve(query: str, top_k: int = TOP_K) -> list[dict]:
     """
-    三阶段检索:
+    三路检索 + 关键词增强:
+      阶段0: 关键词提取 (正则+TF-IDF+TextRank, ≤2词时LLM兜底)
       阶段1: 向量 + BM25 双路召回
       阶段2: RRF 融合排序
       阶段3: Cross-Encoder Reranker 精排
     """
     fetch_k = min(top_k * RERANK_MULTIPLIER, collection.count())
+
+    # ── 阶段0: 关键词增强 ──
+    kw = _extract_keywords(query)
+    if kw:
+        query = query + " " + " ".join(kw)
 
     # ── 路1: 向量检索 ──
     query_with_prefix = QUERY_INSTRUCTION + query
